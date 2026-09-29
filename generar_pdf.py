@@ -139,7 +139,7 @@ def generar_informe_pdf(ruta_salida: str) -> None:
             Paragraph("<b>Lenguaje:</b> Python 3.14", style_table_text),
         ],
         [
-            Paragraph("<b>Repositorio GitHub:</b> https://github.com/luisvillegas190/poo-semanas-5-y-6.git", style_table_text),
+            Paragraph("<b>Repositorio GitHub:</b> https://github.com/luisvillegas190/semana-7-entrega-final.git", style_table_text),
             Paragraph("<b>Fecha:</b> Septiembre 2026", style_table_text),
         ],
     ]
@@ -282,7 +282,7 @@ def generar_informe_pdf(ruta_salida: str) -> None:
     elementos.append(Paragraph("5. Enlace al Repositorio de GitHub e Instrucciones de Ejecución", style_h1))
     p5 = (
         "<b>Enlace al repositorio público en GitHub:</b><br/>"
-        "https://github.com/luisvillegas190/poo-semanas-5-y-6.git<br/><br/>"
+        "https://github.com/luisvillegas190/semana-7-entrega-final.git<br/><br/>"
         "<b>Instrucciones para ejecutar el código:</b><br/>"
         "• Instalar dependencias: <code>python -m pip install -r requirements.txt</code><br/>"
         "• Ejecutar pruebas unitarias: <code>python -m pytest -v</code><br/>"

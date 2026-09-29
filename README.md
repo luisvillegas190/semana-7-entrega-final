@@ -257,8 +257,8 @@ cd "C:\Users\ASUS\Desktop\Villegas_Luis_Semana7"
 
 # 2. Inicializar o sincronizar el repositorio git
 git init
-git remote add origin https://github.com/luisvillegas190/poo-semanas-5-y-6.git
-# (O si ya está configurado: git remote set-url origin https://github.com/luisvillegas190/poo-semanas-5-y-6.git)
+git remote add origin https://github.com/luisvillegas190/semana-7-entrega-final.git
+# (O si ya está configurado: git remote set-url origin https://github.com/luisvillegas190/semana-7-entrega-final.git)
 
 # 3. Agregar los cambios y realizar el commit
 git add .
