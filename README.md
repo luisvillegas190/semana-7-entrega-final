@@ -212,7 +212,6 @@ Villegas_Luis_Semana7/
 │   ├── test_repositorio.py           # 12 tests para patrón Repository y Cola
 │   └── test_modelo.py                # 8 tests para modelos y validaciones Pydantic
 │
-├── generar_pdf.py            # Script automatizado para compilar el informe académico en PDF
 └── Villegas_Luis_Semana7.pdf # Documento formal listo para entrega en Blackboard
 ```
 

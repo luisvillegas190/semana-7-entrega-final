@@ -17,8 +17,5 @@ htmlcov/
 .ruff_cache/
 
 # Archivos de sistema operativo e IDEs
-.vscode/
-.idea/
-*.swp
-Thumbs.db
-Desktop.ini
+# Scripts auxiliares
+generar_pdf.py
