@@ -17,5 +17,13 @@ htmlcov/
 .ruff_cache/
 
 # Archivos de sistema operativo e IDEs
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Datos persistentes generados automáticamente por la aplicación
+data/
+
 # Scripts auxiliares
 generar_pdf.py

@@ -28,14 +28,18 @@ from pydantic import ValidationError
 
 from estructuras_lineales import ColaVaciaError
 from modelo import Categoria, PedidoDespacho, Producto
-from repositorio import DespachoColaRepository, ProductoRepositoryMemoria
+from repositorio import (
+    DespachoColaRepository,
+    ProductoRepositoryJSON,
+    ProductoRepositoryMemoria,
+)
 
 
 def crear_aplicacion(page: ft.Page) -> None:
-    """Configura y orquesta la interfaz gráfica Flet con el patrón Repository."""
+    """Configura y orquesta la interfaz gráfica Flet con el patrón Repository y Persistencia JSON."""
 
     # 1. Configuración de la ventana principal
-    page.title = "Sistema de Bodega — Patrones de Diseño y TDA Lineales (Semana 7)"
+    page.title = "Sistema de Bodega — Patrones de Diseño, TDAs Lineales y Persistencia JSON (Examen Final)"
     page.theme_mode = ft.ThemeMode.LIGHT
     page.padding = 16
     page.window.width = 1250
@@ -43,11 +47,15 @@ def crear_aplicacion(page: ft.Page) -> None:
     page.window.min_width = 950
     page.window.min_height = 700
 
-    # 2. Inicialización de Repositorios (Capa de Acceso a Datos Desacoplada)
-    repo_productos = ProductoRepositoryMemoria()
-    repo_despachos = DespachoColaRepository(producto_repo=repo_productos)
+    # 2. Inicialización de Repositorios con Persistencia JSON Física en Disco (Requisito Examen Final)
+    repo_productos = ProductoRepositoryJSON("data/productos.json", inicializar_demo=True)
+    repo_despachos = DespachoColaRepository(
+        producto_repo=repo_productos,
+        ruta_archivo="data/despachos.json",
+        inicializar_demo=True,
+    )
 
-    # Categorías y productos iniciales para demostración
+    # Categorías y configuración
     cat_acc = Categoria("CAT-ACC", "Accesorios")
     cat_elec = Categoria("CAT-ELE", "Electrónica")
     cat_her = Categoria("CAT-HER", "Herramientas")
@@ -57,27 +65,18 @@ def crear_aplicacion(page: ft.Page) -> None:
     categorias_disponibles = [cat_acc, cat_elec, cat_her, cat_red, cat_alm]
     mapa_categorias = {cat.get_nombre(): cat for cat in categorias_disponibles}
 
-    productos_demo = [
-        Producto("PRD-001", "Lector de Código de Barras Láser RF", 145.00, 25, cat_acc),
-        Producto("PRD-002", "Terminal Portátil de Inventario Android", 380.00, 12, cat_elec),
-        Producto("PRD-003", "Impresora Térmica de Etiquetas 4x6", 210.00, 18, cat_elec),
-        Producto("PRD-004", "Bobina de Cable UTP Cat6 305m", 85.50, 30, cat_red),
-        Producto("PRD-005", "Transpaleta Hidráulica Manual 2.5 Ton", 450.00, 6, cat_her),
-        Producto("PRD-006", "Switch Gigabit Gestionable 24 Puertos", 175.00, 15, cat_red),
-        Producto("PRD-007", "Disco Sólido SSD NVMe 1TB Industrial", 115.00, 40, cat_alm),
-    ]
-    for p in productos_demo:
-        repo_productos.guardar(p)
-
-    # Precargar dos órdenes de despacho para demostrar la Cola FIFO desde el inicio
-    repo_despachos.encolar_despacho(
-        PedidoDespacho("ORD-101", "Sucursal Guayaquil Centro", "PRD-001", "Lector Láser", 3)
-    )
-    repo_despachos.encolar_despacho(
-        PedidoDespacho("ORD-102", "Logística Quito Norte", "PRD-003", "Impresora Térmica", 2)
-    )
-
-    contador_pedidos = 103
+    def calcular_siguiente_id() -> str:
+        todos = repo_despachos.listar_pendientes() + repo_despachos.listar_historial()
+        ids = []
+        for ped in todos:
+            pid = ped.get_id_pedido()
+            if pid.startswith("ORD-"):
+                try:
+                    ids.append(int(pid.replace("ORD-", "")))
+                except ValueError:
+                    pass
+        siguiente = (max(ids) + 1) if ids else 101
+        return f"ORD-{siguiente}"
 
     # FUNCIÓN AUXILIAR DE NOTIFICACIÓN (SnackBar)
     def notificar(mensaje: str, es_error: bool = False) -> None:
@@ -207,7 +206,7 @@ def crear_aplicacion(page: ft.Page) -> None:
             def on_del_click(e, cod=codigo):
                 try:
                     repo_productos.eliminar(cod)
-                    notificar(f"🗑️ Producto '{cod}' eliminado del catálogo.")
+                    notificar(f"🗑️ Producto '{cod}' eliminado del catálogo y persistido en disco.")
                     limpiar_formulario_producto()
                     recargar_todo()
                 except KeyError as err:
@@ -293,7 +292,7 @@ def crear_aplicacion(page: ft.Page) -> None:
             cat_obj = mapa_categorias[cat_nom]
             nuevo = Producto(codigo=cod, nombre=nom, precio=prec, stock=stk, categoria=cat_obj)
             repo_productos.guardar(nuevo)
-            notificar(f"✅ Producto '{cod}' guardado exitosamente.")
+            notificar(f"✅ Producto '{cod}' guardado y persistido en data/productos.json.")
             limpiar_formulario_producto()
             recargar_todo()
         except ValidationError as err:
@@ -319,7 +318,7 @@ def crear_aplicacion(page: ft.Page) -> None:
                 stock=stk,
                 categoria=cat_obj,
             )
-            notificar(f"✏️ Producto '{cod}' actualizado.")
+            notificar(f"✏️ Producto '{cod}' actualizado y persistido en data/productos.json.")
             limpiar_formulario_producto()
             recargar_todo()
         except (ValidationError, ValueError, KeyError) as err:
@@ -375,7 +374,7 @@ def crear_aplicacion(page: ft.Page) -> None:
 
     txt_dsp_id = ft.TextField(
         label="ID de Orden",
-        value=f"ORD-{contador_pedidos}",
+        value=calcular_siguiente_id(),
         read_only=True,
         width=130,
         dense=True,
@@ -435,7 +434,7 @@ def crear_aplicacion(page: ft.Page) -> None:
             dd_dsp_producto.value = prods[0].get_codigo()
 
     def recargar_vista_despachos() -> None:
-        nonlocal contador_pedidos
+        txt_dsp_id.value = calcular_siguiente_id()
         # Métricas de la cola
         total_p = repo_despachos.total_pendientes()
         lbl_cola_total.value = str(total_p)
@@ -547,7 +546,6 @@ def crear_aplicacion(page: ft.Page) -> None:
         page.update()
 
     def handle_encolar_despacho(e) -> None:
-        nonlocal contador_pedidos
         cliente = txt_dsp_cliente.value.strip()
         cod_prod = dd_dsp_producto.value
         cant_str = txt_dsp_cantidad.value.strip()
@@ -564,19 +562,18 @@ def crear_aplicacion(page: ft.Page) -> None:
                 return
 
             nuevo_pedido = PedidoDespacho(
-                id_pedido=f"ORD-{contador_pedidos}",
+                id_pedido=txt_dsp_id.value,
                 cliente=cliente,
                 codigo_producto=prod.get_codigo(),
                 nombre_producto=prod.get_nombre(),
                 cantidad=cant,
             )
 
-            # Inserción en la ColaLineal mediante el Repository
+            # Inserción en la ColaLineal mediante el Repository y persistencia en disco
             repo_despachos.encolar_despacho(nuevo_pedido)
-            notificar(f"📥 Orden '{nuevo_pedido.get_id_pedido()}' agregada a la Cola FIFO con éxito.")
+            notificar(f"📥 Orden '{nuevo_pedido.get_id_pedido()}' agregada a la Cola FIFO y guardada en disco.")
 
-            contador_pedidos += 1
-            txt_dsp_id.value = f"ORD-{contador_pedidos}"
+            txt_dsp_id.value = calcular_siguiente_id()
             txt_dsp_cliente.value = ""
             txt_dsp_cantidad.value = ""
 
@@ -592,8 +589,8 @@ def crear_aplicacion(page: ft.Page) -> None:
         try:
             despachado = repo_despachos.despachar_siguiente()
             notificar(
-                f"🚀 Despacho Exitoso: Se atendió la orden '{despachado.get_id_pedido()}' "
-                f"para '{despachado.get_cliente()}'. Stock actualizado en inventario."
+                f"🚀 Despacho Exitoso: Se atendió '{despachado.get_id_pedido()}' "
+                f"para '{despachado.get_cliente()}'. Stock y estado persistidos en disco."
             )
             recargar_todo()
         except ColaVaciaError as err:
@@ -873,24 +870,53 @@ def crear_aplicacion(page: ft.Page) -> None:
         on_click=toggle_theme,
     )
 
+    def handle_restablecer_demo(e):
+        repo_productos.restaurar_demo()
+        repo_despachos.restaurar_demo()
+        recargar_todo()
+        notificar("🔄 Datos de catálogo y órdenes de demo restablecidos en archivos JSON.")
+
+    btn_restaurar = ft.OutlinedButton(
+        "Restablecer Demo",
+        icon=ft.Icons.RESTORE,
+        tooltip="Restaura catálogo y pedidos demo en disco",
+        on_click=handle_restablecer_demo,
+        height=36,
+    )
+
+    badge_persistencia = ft.Container(
+        content=ft.Row([
+            ft.Icon(ft.Icons.STORAGE, size=15, color=ft.Colors.GREEN_800),
+            ft.Text("Persistencia Activa (JSON)", size=12, weight=ft.FontWeight.W_600, color=ft.Colors.GREEN_900),
+        ], spacing=4),
+        bgcolor=ft.Colors.GREEN_100,
+        border=ft.Border.all(1, ft.Colors.GREEN_400),
+        border_radius=12,
+        padding=ft.Padding.symmetric(horizontal=10, vertical=4),
+    )
+
     header = ft.Container(
         content=ft.Row([
             ft.Row([
                 ft.Icon(ft.Icons.WAREHOUSE, size=36, color=ft.Colors.BLUE_700),
                 ft.Column([
                     ft.Text(
-                        "Sistema de Gestión de Bodega — Patrones de Diseño y TDAs Lineales",
+                        "Sistema de Gestión de Bodega — Patrones de Diseño, TDAs Lineales y Persistencia",
                         size=18,
                         weight=ft.FontWeight.BOLD,
                     ),
                     ft.Text(
-                        "Semana 7: ColaLineal FIFO manual, Patrón Repository y Testing Pytest | Luis Alberto Villegas Merchan",
+                        "Examen Final: ColaLineal FIFO manual, Patrón Repository y Persistencia JSON | Luis Alberto Villegas Merchan",
                         size=12,
                         color=ft.Colors.GREY_700,
                     ),
                 ], spacing=2),
             ]),
-            theme_btn,
+            ft.Row([
+                badge_persistencia,
+                btn_restaurar,
+                theme_btn,
+            ], spacing=8),
         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
         padding=ft.Padding.only(bottom=6),
     )

@@ -85,6 +85,21 @@ class Categoria:
     def __hash__(self) -> int:
         return hash(self.__codigo)
 
+    def to_dict(self) -> dict[str, str]:
+        """Serializa la categoría a un diccionario serializable en JSON."""
+        return {
+            "codigo": self.__codigo,
+            "nombre": self.__nombre,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, str]) -> Categoria:
+        """Reconstruye una instancia de Categoria desde un diccionario."""
+        return cls(
+            codigo=data["codigo"],
+            nombre=data["nombre"],
+        )
+
 
 class Producto:
     """
@@ -199,6 +214,33 @@ class Producto:
     def __hash__(self) -> int:
         return hash(self.__codigo)
 
+    def to_dict(self) -> dict:
+        """Serializa el producto a un diccionario compatible con JSON."""
+        return {
+            "codigo": self.__codigo,
+            "nombre": self.__nombre,
+            "precio": self.__precio,
+            "stock": self.__stock,
+            "categoria": self.__categoria.to_dict(),
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> Producto:
+        """Reconstruye una instancia de Producto desde un diccionario."""
+        cat_data = data["categoria"]
+        if isinstance(cat_data, dict):
+            categoria_obj = Categoria.from_dict(cat_data)
+        else:
+            categoria_obj = Categoria("CAT-GEN", str(cat_data))
+
+        return cls(
+            codigo=data["codigo"],
+            nombre=data["nombre"],
+            precio=float(data["precio"]),
+            stock=int(data["stock"]),
+            categoria=categoria_obj,
+        )
+
 
 class PedidoDespacho:
     """
@@ -273,6 +315,36 @@ class PedidoDespacho:
             f"Producto: {self.__nombre_producto} ({self.__codigo_producto}) x{self.__cantidad} uds. | "
             f"Estado: {self.__estado}"
         )
+
+    def to_dict(self) -> dict:
+        """Serializa la orden de despacho a un formato almacenable en JSON."""
+        return {
+            "id_pedido": self.__id_pedido,
+            "cliente": self.__cliente,
+            "codigo_producto": self.__codigo_producto,
+            "nombre_producto": self.__nombre_producto,
+            "cantidad": self.__cantidad,
+            "fecha_registro": self.__fecha_registro,
+            "estado": self.__estado,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict) -> PedidoDespacho:
+        """Reconstruye una orden de despacho desde un diccionario."""
+        pedido = cls(
+            id_pedido=data["id_pedido"],
+            cliente=data["cliente"],
+            codigo_producto=data["codigo_producto"],
+            nombre_producto=data["nombre_producto"],
+            cantidad=int(data["cantidad"]),
+            fecha_registro=data.get("fecha_registro"),
+        )
+        estado = data.get("estado", "PENDIENTE")
+        if estado == "DESPACHADO":
+            pedido.marcar_despachado()
+        elif estado == "CANCELADO":
+            pedido.marcar_cancelado()
+        return pedido
 
 
 # CLASE LEGACY PARA RETROCOMPATIBILIDAD CON SEMANA 5

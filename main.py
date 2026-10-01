@@ -24,7 +24,11 @@ import flet as ft
 from app import crear_aplicacion
 from estructuras_lineales import ColaLineal, PilaLineal
 from modelo import Categoria, PedidoDespacho, Producto
-from repositorio import DespachoColaRepository, ProductoRepositoryMemoria
+from repositorio import (
+    DespachoColaRepository,
+    ProductoRepositoryJSON,
+    ProductoRepositoryMemoria,
+)
 
 
 def ejecutar_demostracion_consola() -> None:
@@ -146,6 +150,29 @@ def ejecutar_demostracion_consola() -> None:
     print(f"    - Unidades restantes en stock: {repo_prod.total_unidades()} uds.")
     print(f"    - Valor restante: ${repo_prod.valor_total():,.2f}")
     print(f"    - Historial de despachos archivados en la Pila LIFO: {len(repo_desp.listar_historial())} pedidos.")
+
+    # -------------------------------------------------------------
+    # PARTE 4: DEMOSTRACIÓN DE PERSISTENCIA DE DATOS (ARCHIVOS JSON)
+    # -------------------------------------------------------------
+    print("\n" + "-" * 75)
+    print(">>> 4. DEMOSTRACIÓN DE PERSISTENCIA DE DATOS EN ARCHIVOS JSON")
+    print("    Requisito Obligatorio del Examen: Almacenar y recuperar información")
+    print("-" * 75)
+
+    repo_json = ProductoRepositoryJSON(ruta_archivo="data/productos.json", inicializar_demo=True)
+    print(f"[*] Repositorio de productos persistente: {repo_json.obtener_ruta_archivo()}")
+    print(f"[OK] Total de productos sincronizados en disco: {repo_json.contar()}")
+    print(f"[OK] Unidades físicas en catálogo persistente: {repo_json.total_unidades()} uds.")
+    print(f"[OK] Valor total de inventario persistente: ${repo_json.valor_total():,.2f}")
+
+    repo_desp_json = DespachoColaRepository(
+        producto_repo=repo_json,
+        ruta_archivo="data/despachos.json",
+        inicializar_demo=True,
+    )
+    print(f"[*] Repositorio de despachos persistente: {repo_desp_json.obtener_ruta_archivo()}")
+    print(f"[OK] Órdenes activas en Cola FIFO persistente: {repo_desp_json.total_pendientes()}")
+    print(f"[OK] Despachos históricos en Pila LIFO persistente: {len(repo_desp_json.listar_historial())}")
 
     print("\n" + "=" * 80)
     print("  DEMOSTRACIÓN EN CONSOLA FINALIZADA EXITOSAMENTE")
